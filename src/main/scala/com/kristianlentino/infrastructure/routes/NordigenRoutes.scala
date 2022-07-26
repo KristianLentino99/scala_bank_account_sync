@@ -43,7 +43,7 @@ class NordigenRoutes(nordigenRegistry: ActorRef[Command])(implicit val actorSyst
           headerValueByName("Authorization") { authToken =>
             parameters("country".as[String]) { country =>
               /**
-               * Obviously normally this is wrong, but wel... it's a learning project so anything is permitted
+               * Obviously normally this is wrong, but well... it's a learning project so everything is permitted
                */
               val parsedToken = authToken.replace("Bearer ", "")
               onSuccess(getBankList(country,parsedToken)) { bankList =>
