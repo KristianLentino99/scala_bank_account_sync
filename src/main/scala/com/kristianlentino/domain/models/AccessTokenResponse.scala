@@ -1,6 +1,6 @@
-package com.kristianlentino.common.models
+package com.kristianlentino.domain.models
 
-case class NordigenAccessTokenResponse(
+case class AccessTokenResponse(
   access: String,
   access_expires: Long,
   refresh: String,

@@ -1,4 +1,4 @@
-package com.kristianlentino.common.utilities.http
+package com.kristianlentino.infrastructure.http
 
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
@@ -6,24 +6,24 @@ import akka.http.javadsl.model.headers.Authorization
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.kristianlentino.common.models.{Institute, NordigenAccessTokenResponse}
-import com.kristianlentino.common.traits.NordigenUnmarshaller
+import com.kristianlentino.common.traits.ObjectsUnmarshaller
+import com.kristianlentino.domain.http.BaseOpenBankingRestClient
+import com.kristianlentino.domain.models.{AccessTokenResponse, Institute}
 import com.typesafe.config.Config
 import spray.json.DefaultJsonProtocol.listFormat
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class NordigenClient(implicit config: Config) extends NordigenUnmarshaller {
+class NordigenClient(implicit config: Config) extends BaseOpenBankingRestClient  with ObjectsUnmarshaller {
 
 
   private val NORDIGEN_BASE_URL = "https://ob.nordigen.com/"
-  private val API_VERSION = "v2"
-  private val API_PREFIX = "api"
-  implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "NordigenRequest")
-  // needed for the future flatMap/onComplete in the end
-  implicit val executionContext: ExecutionContextExecutor = system.executionContext
-  private def buildApiURL: String = s"$NORDIGEN_BASE_URL$API_PREFIX/$API_VERSION/"
-  def getAccessToken: Future[NordigenAccessTokenResponse] = {
+  override val API_VERSION = Some("v2")
+  override val API_PREFIX = Some("api")
+  override implicit val system: ActorSystem[Nothing] = ActorSystem(Behaviors.empty, "NordigenRequest")
+  override implicit val executionContext: ExecutionContextExecutor = system.executionContext
+  override def buildApiURL: String = s"$NORDIGEN_BASE_URL${API_PREFIX.map(value => value + "/").getOrElse("")}${API_VERSION.map(value => value + "/").getOrElse("")}"
+  override def getAccessToken: Future[AccessTokenResponse] = {
     val responseFuture: Future[HttpResponse] = Http().singleRequest(
       HttpRequest(
         method = HttpMethods.POST,
@@ -38,7 +38,7 @@ class NordigenClient(implicit config: Config) extends NordigenUnmarshaller {
     responseFuture
       .flatMap {
         case HttpResponse(StatusCodes.OK, _, entity, _) =>
-          Unmarshal(entity).to[NordigenAccessTokenResponse].flatMap( tokenResponse => {
+          Unmarshal(entity).to[AccessTokenResponse].flatMap( tokenResponse => {
             Future.successful(tokenResponse)
           })
         case HttpResponse(statusCode, _, entity, _) => {
@@ -47,7 +47,7 @@ class NordigenClient(implicit config: Config) extends NordigenUnmarshaller {
       }
   }
 
-  def getInstitutionsList(country: String, accessToken: String): Future[List[Institute]] = {
+  override def getInstitutionsList(country: String, accessToken: String): Future[List[Institute]] = {
     val responseFuture: Future[HttpResponse] = Http().singleRequest(
       HttpRequest(
         method = HttpMethods.GET,

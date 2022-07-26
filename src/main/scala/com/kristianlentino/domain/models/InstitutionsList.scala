@@ -1,4 +1,4 @@
-package com.kristianlentino.common.models
+package com.kristianlentino.domain.models
 
 case class Institute(
   id: String,

@@ -4,14 +4,14 @@ import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.kristianlentino.registry.NordigenRegistry
-import com.kristianlentino.routes.NordigenRoutes
+import com.kristianlentino.infrastructure.registry.NordigenRegistry
+import com.kristianlentino.infrastructure.routes.NordigenRoutes
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.{Failure, Success}
 
 //#main-class
-object NordigenBankSync {
+object EntryPoint {
 
   implicit val config: Config = ConfigFactory.load("application.conf")
 

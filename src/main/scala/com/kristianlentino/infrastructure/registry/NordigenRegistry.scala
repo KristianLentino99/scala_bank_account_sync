@@ -1,32 +1,30 @@
-package com.kristianlentino.registry
+package com.kristianlentino.infrastructure.registry
 
 //#user-registry-actor
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
-import com.kristianlentino.NordigenBankSync.config
-import com.kristianlentino.common.models.{Institute, NordigenAccessTokenResponse}
-import com.kristianlentino.common.utilities.http.NordigenClient
+import com.kristianlentino.EntryPoint.config
+import com.kristianlentino.domain.http.BaseOpenBankingRestClient
+import com.kristianlentino.domain.models.{AccessTokenResponse, Institute}
+import com.kristianlentino.infrastructure.http.NordigenClient
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
-
+import com.kristianlentino.domain.models.Command
 
 
 object NordigenRegistry {
-  // actor protocol
-  sealed trait Command
-  final case class GetAccessToken(replyTo: ActorRef[NordigenAccessTokenResponse]) extends Command
+  final case class GetAccessToken(replyTo: ActorRef[AccessTokenResponse]) extends Command
   final case class GetBankList(replyTo: ActorRef[List[Institute]], country: String, accessToken: String) extends Command
-  final case class ActionPerformed(description: String)
   def apply(): Behavior[Command] = registry()
-  val nordigenClient = new NordigenClient()
+  val restApiClient: BaseOpenBankingRestClient = new NordigenClient()
   private def registry(): Behavior[Command] =
     Behaviors.receiveMessage {
       case GetAccessToken(replyTo) =>
-        val getToken = nordigenClient.getAccessToken.map{ tokenResponse => {
-          replyTo ! NordigenAccessTokenResponse(
+        val getToken = restApiClient.getAccessToken.map{ tokenResponse => {
+          replyTo ! AccessTokenResponse(
             access = tokenResponse.access,
             access_expires = tokenResponse.access_expires,
             refresh = tokenResponse.refresh,
@@ -37,7 +35,7 @@ object NordigenRegistry {
         Await.result(getToken, 5000 millis)
         Behaviors.same
       case GetBankList(replyTo, country, accessToken) =>
-        val bankList = nordigenClient.getInstitutionsList(country,accessToken).map{ bankListResponse => {
+        val bankList = restApiClient.getInstitutionsList(country,accessToken).map{ bankListResponse => {
           replyTo ! bankListResponse
         }}
 
