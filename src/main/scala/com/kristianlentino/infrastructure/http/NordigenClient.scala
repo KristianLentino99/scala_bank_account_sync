@@ -7,10 +7,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.kristianlentino.common.traits.ObjectsUnmarshaller
-import com.kristianlentino.domain.http.BaseOpenBankingRestClient
 import com.kristianlentino.domain.models.{AccessTokenResponse, Institute}
+import com.kristianlentino.infrastructure.http.responses.CreateBankLinkResponse
 import com.typesafe.config.Config
 import spray.json.DefaultJsonProtocol.listFormat
+import spray.json.JsValue
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -66,6 +67,35 @@ class NordigenClient(implicit config: Config) extends BaseOpenBankingRestClient 
           })
         case HttpResponse(statusCode, _, _, _) => {
           sys.error(s"Errore ${statusCode.intValue().toString}")
+        }
+      }
+  }
+
+  override def createBankLink(institutionId: String, redirectUri: String, accessToken: String): Future[CreateBankLinkResponse] = {
+    val responseFuture: Future[HttpResponse] = Http().singleRequest(
+      HttpRequest(
+        method = HttpMethods.POST,
+        uri = s"${buildApiURL}requisitions/" ,
+        headers = Seq(
+          Authorization.oauth2(accessToken)
+        ),
+        entity = HttpEntity(ContentTypes.`application/json`,
+          s"""
+             | {     "institution_id":"${institutionId}",     "redirect":"${redirectUri}"}
+             |""".stripMargin),
+      )
+    )
+
+    responseFuture
+      .flatMap {
+        case HttpResponse(StatusCodes.Created, _, entity, _) =>
+          Unmarshal(entity).to[CreateBankLinkResponse].flatMap(createBankLinkResponse => {
+            Future.successful(createBankLinkResponse)
+          })
+        case HttpResponse(statusCode, _, entity, _) => {
+          Unmarshal(entity).to[JsValue].flatMap( value => {
+            sys.error(s"[error] ${statusCode.intValue().toString} --- ${value.toString()}")
+          })
         }
       }
   }
